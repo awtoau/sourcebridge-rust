@@ -7,10 +7,11 @@ under Free Pascal 3.2.3, x86_64 Linux, Delphi mode:
 - Delphi `Integer` maps to Rust `i32`;
 - Delphi `Cardinal` maps to Rust `u32`;
 - function bodies must be an addition of their two declared parameters;
-- only non-overflow examples are currently validated.
+- the pinned FPC variant's tested function-result overflow behavior maps to
+  `wrapping_add`.
 
 Unsupported facts are rejected rather than guessed. This pack does not claim
-Delphi overflow, ABI, or runtime equivalence.
+Embarcadero Delphi ABI or runtime equivalence.
 
 The input facts must include the verified source variant. The initial emitter
 accepts only Free Pascal 3.2.3, x86_64 Linux, Delphi mode; it refuses otherwise

@@ -103,7 +103,7 @@ fn emit_function(output: &mut String, fact: &ScalarAdditionFunction) -> Result<(
     .expect("writing to String cannot fail");
     writeln!(
         output,
-        "    {} + {}",
+        "    {}.wrapping_add({})",
         snake_case(&fact.parameters[0].name),
         snake_case(&fact.parameters[1].name),
     )
@@ -150,7 +150,7 @@ mod tests {
         }"#;
         let output = emit_scalar_additions(facts).expect("fixture facts should emit");
         assert!(output.contains("pub fn add_signed(left: i32, right: i32) -> i32"));
-        assert!(output.contains("left + right"));
+        assert!(output.contains("left.wrapping_add(right)"));
     }
 
     #[test]
