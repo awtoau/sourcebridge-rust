@@ -6,7 +6,22 @@ use std::fmt::Write;
 #[derive(Debug, Deserialize)]
 pub struct FactDocument {
     pub source_language: String,
+    pub variant: Variant,
     pub facts: Vec<ScalarAdditionFunction>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Variant {
+    pub compiler: Compiler,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Compiler {
+    pub family: String,
+    pub version: String,
+    pub target_cpu: String,
+    pub target_os: String,
+    pub mode: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,6 +46,7 @@ pub fn emit_scalar_additions(input: &str) -> Result<String, String> {
     if document.source_language != "delphi" {
         return Err("only Delphi source facts are supported".to_owned());
     }
+    validate_variant(&document.variant)?;
     if document.facts.is_empty() {
         return Err("no scalar addition facts were supplied".to_owned());
     }
@@ -39,6 +55,20 @@ pub fn emit_scalar_additions(input: &str) -> Result<String, String> {
         emit_function(&mut output, fact)?;
     }
     Ok(output)
+}
+
+fn validate_variant(variant: &Variant) -> Result<(), String> {
+    let compiler = &variant.compiler;
+    if compiler.family == "free-pascal"
+        && compiler.version == "3.2.3"
+        && compiler.target_cpu == "x86_64"
+        && compiler.target_os == "linux"
+        && compiler.mode == "delphi"
+    {
+        Ok(())
+    } else {
+        Err("unsupported source compiler variant for scalar type mapping".to_owned())
+    }
 }
 
 fn emit_function(output: &mut String, fact: &ScalarAdditionFunction) -> Result<(), String> {
@@ -109,6 +139,7 @@ mod tests {
     fn emits_verified_scalar_functions() {
         let facts = r#"{
           "source_language":"delphi",
+          "variant":{"compiler":{"family":"free-pascal","version":"3.2.3","target_cpu":"x86_64","target_os":"linux","mode":"delphi"}},
           "facts":[{
             "kind":"scalar_addition_function",
             "name":"AddSigned",
@@ -126,11 +157,28 @@ mod tests {
     fn rejects_unverified_source_type() {
         let facts = r#"{
           "source_language":"delphi",
+          "variant":{"compiler":{"family":"free-pascal","version":"3.2.3","target_cpu":"x86_64","target_os":"linux","mode":"delphi"}},
           "facts":[{
             "kind":"scalar_addition_function",
             "name":"AddWide",
             "parameters":[{"name":"Left","type":"int64"},{"name":"Right","type":"int64"}],
             "return_type":"int64",
+            "operands":["Left","Right"]
+          }]
+        }"#;
+        assert!(emit_scalar_additions(facts).is_err());
+    }
+
+    #[test]
+    fn rejects_unpinned_compiler_variant() {
+        let facts = r#"{
+          "source_language":"delphi",
+          "variant":{"compiler":{"family":"free-pascal","version":"3.2.4","target_cpu":"x86_64","target_os":"linux","mode":"delphi"}},
+          "facts":[{
+            "kind":"scalar_addition_function",
+            "name":"AddSigned",
+            "parameters":[{"name":"Left","type":"integer"},{"name":"Right","type":"integer"}],
+            "return_type":"integer",
             "operands":["Left","Right"]
           }]
         }"#;
